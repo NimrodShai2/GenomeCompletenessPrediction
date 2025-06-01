@@ -59,7 +59,7 @@ You can specify the following flags when running the script:
 - `--cv`: Whether to run in cross-validation mode (default: False)
 - `--folds`: Number of folds for cross-validation (default: 5)
 - `--epochs`: Number of epochs for the neural network (default: 100)
-- `--dropout`: Dropout rate for the neural network (default: 0.2)
+- `--dropout`: Dropout rate for the neural network (default: 0)
 
 ---
 
