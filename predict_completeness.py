@@ -8,7 +8,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from Networks.fully_connecnted_feed_forward import create_fully_connected_feed_forward
+from Networks.fully_connecnted_feed_forward import create_fully_connected_feed_forward, \
+    create_fully_connected_feed_forward_with_dropout
 import matplotlib.pyplot as plt
 
 from cross_validate import run_cross_validation
@@ -29,7 +30,7 @@ def evaluate_model(y_true, y_pred):
     return mse
 
 
-def run_train_test(X, y):
+def run_train_test(X, y, dropout_rate, epochs):
     """
     Run the train-test split and fit multiple models to predict genome completeness.
     :param X: The feature set containing genome metadata.
@@ -50,8 +51,13 @@ def run_train_test(X, y):
     y_pred_rf = rf.predict(X_test)
     print("Random forest model trained.", flush=True)
     # Fit a fully connected feed-forward neural network model
-    ff_nn = create_fully_connected_feed_forward(X_train.shape[1:], 1, loss='mse')
-    ff_nn.fit(X_train, y_train, epochs=100, batch_size=50, verbose=0,
+    if dropout_rate < 0:
+        ff_nn = create_fully_connected_feed_forward(X_train.shape[1:], 1, loss='mse')
+    else:
+        ff_nn = create_fully_connected_feed_forward_with_dropout(X_train.shape[1:], 1, loss='mse',
+                                                                 dropout_rate=dropout_rate)
+
+    ff_nn.fit(X_train, y_train, epochs=epochs, batch_size=50, verbose=0,
               validation_split=0.2)
     # Predict completeness on the test set
     y_pred_ff_nn = ff_nn.predict(X_test).flatten()
@@ -87,6 +93,9 @@ if __name__ == "__main__":
     parser.add_argument("input_file", help="Path to UHGG metadata file")
     parser.add_argument("--cv", action="store_true", help="Enable cross-validation")
     parser.add_argument("--folds", type=int, default=5, help="Number of CV folds (default: 5)")
+    parser.add_argument("--dropout", type=float, default=0.0, help="Dropout rate for the neural network (default: 0)")
+    parser.add_argument("--epochs", type=int, default=100,
+                        help="Number of epochs for training the neural network (default: 100)")
     args = parser.parse_args()
 
     input_file = args.input_file
@@ -118,8 +127,10 @@ if __name__ == "__main__":
     X_scaled = scaler.fit_transform(X)
 
     if args.cv:
-        run_cross_validation(X_scaled, y, args.folds)
+        print(f"Running cross-validation with {args.folds} folds...", flush=True)
+        run_cross_validation(X_scaled, y, args.folds, args.dropout, args.epochs)
+        print("Cross-validation completed.")
     else:
-        print("Running train-test split...")
-        run_train_test(X_scaled, y)
+        print("Running train-test split...", flush=True)
+        run_train_test(X_scaled, y, args.dropout, args.epochs)
         print("Train-test split completed.")
